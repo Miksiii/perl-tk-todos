@@ -6,84 +6,75 @@ use 5.010;
 use Tk;
 use Tk::DialogBox;
 use List::MoreUtils qw(firstidx);
-use Time::HiRes;
 
 my $mw = new MainWindow;
-$mw->title("To-Do App");
-$mw->configure(-bg => 'white');
+$mw->title("Super Cool App");
+$mw->configure(-bg => "white");
 $mw->protocol('WM_DELETE_WINDOW' => \&on_exit_save_todos);
+
+my $label_input = $mw->Label(-text => "Add new ToDo", -bg => "white", -width => 30)
+                     ->grid(-column => 0, -row => 0);
+
+my $input = $mw->Entry(-text => "", -width => 30)
+               ->grid(-column => 0, -row => 1);
+
+my $button = $mw->Button(-text => "Add", -bg => "blue", 
+                         -foreground => "white", -width => 30,
+                         -command => \&item_add)
+                ->grid(-column => 0, -row => 2);              
+
+my $listbox = $mw->Listbox(-width => 30)
+                ->grid(-column => 0, -row => 3);  
+
+my $label_output = $mw->Label(-text => "", -bg => "white", -width => 30)
+                     ->grid(-column => 0, -row => 4);                 
 
 my @todos = ();
 
-my $l_input  = $mw->Label(-bg => 'white', -text => 'Add new To-Do') 
-               ->pack(-ipady => 20)
-               ->grid(-column => 1, -row=>0);
-
-my $input    = $mw->Entry(-text => '') 
-               ->pack(-side => 'left')
-               ->grid(-column => 1, -row=>1);
-
-my $button   = $mw->Button(-background => 'blue', -foreground => 'white', -text => 'Add', -width => 19, -command => \&item_add) 
-               ->pack(-side => 'right')
-               ->grid(-column => 1, -row=>2);
-
-my $listBox  = $mw->Listbox()
-               ->pack(-side => 'left')
-               ->grid(-column => 1, -row=>3);
-
-my $l_output = $mw->Label(-bg => 'white', -text => '') 
-               ->pack(-ipady => 20)
-               ->grid(-column => 1, -row=>4);              
-
-$listBox -> bind('<Double-1>'=> \&item_check);
-
-if (open(my $fh, '<', 'todos.txt')) {
-  $l_output->configure(-text => 'All todos loaded.');
-
+if ( open(my $fh, '<', 'todos.txt') ) {
   while(<$fh>) {
     chomp $_;
     push(@todos, $_);
   }
-
+  $label_output->configure(-text => scalar @todos . " items loaded");
   close($fh);
 }
 
-$listBox -> insert('end', @todos );
+$listbox->insert('end', @todos);
+$listbox->bind('<Double-1>', \&item_check);
 
 sub item_add {
-  if ($input->get() eq "") {
-    $l_output->configure(-text => 'Cannot add nothing..');
-    return
-  } ;
+  if($input->get() eq "") { 
+    $label_output->configure(-text => "Cannot add blanko");
+    return;
+  }
 
-  $listBox->delete(0, 'end');
+  $listbox->delete(0, 'end');
   push(@todos, $input->get());
-  $listBox->insert('end', @todos);
+  $listbox->insert('end', @todos);
   $input->delete(0, 'end');
-
-  $l_output->configure(-text => 'New item added.');
+  $label_output->configure(-text => "Item added");
 }
 
 sub item_check {
-  my $dialog = $mw->DialogBox (-title => "Already done?", -buttons => ["Yes", "No"]);
-  my $dialog_answer = $dialog->Show();
+  my $dialog_box = $mw->DialogBox(-title => 'Wow, already done?', -buttons => ["Yes", "No"]);
+  my $dialog_box_answer = $dialog_box->Show();
 
-  if ($dialog_answer eq "Yes") {
-    my $item_selected = $_[0]->get($_[0]->curselection);
-    my $item_index = firstidx { $_ eq $item_selected } @todos;
-    splice(@todos, $item_index, 1);
-    $listBox->delete(0, 'end');
-    $listBox->insert('end', @todos );
+  if ($dialog_box_answer eq "No") { return; }
+    my $todo_item = $_[0]->get($_[0]->curselection);
+    my $todo_item_index = firstidx { $_ eq $todo_item } @todos;
+    splice(@todos, $todo_item_index, 1);
 
-    $l_output->configure(-text => 'One item removed.');
-  }
+    $listbox->delete(0, 'end');
+    $listbox->insert('end', @todos);
 
+    $label_output->configure(-text => 'One item removed.');
 }
 
 sub on_exit_save_todos {
-  if (open(my $fh, '>', 'todos.txt')) {
+  if ( open(my $fh, '>', 'todos.txt') ) {
     for (@todos) {
-      say $fh $_; 
+      say $fh $_;
     }
   }
 
